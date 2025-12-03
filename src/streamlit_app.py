@@ -20,6 +20,7 @@ from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_openai import OpenAIEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_openai import ChatOpenAI
 
 
 def load_env_file(env_path: Path) -> None:
@@ -51,7 +52,7 @@ GEMINI_EMBEDDING_MODEL = os.getenv(
     "GEMINI_EMBEDDING_MODEL", "models/gemini-embedding-001"
 )
 GEMINI_CHAT_MODEL = os.getenv("GEMINI_CHAT_MODEL", "gemini-2.5-flash")
-PROVIDER_OPTIONS = ("OpenAI", "Gemini")
+PROVIDER_OPTIONS = ( "Gemini","Grok","OpenAI")
 
 load_env_file(ENV_FILE)
 
@@ -84,8 +85,11 @@ def require_provider_keys(provider: str) -> None:
             "Please set the GOOGLE_API_KEY environment variable to use Gemini models."
         )
         st.stop()
-    if provider == "OpenAI" and not os.getenv("OPENAI_API_KEY"):
-        st.error("Please set the OPENAI_API_KEY environment variable to continue.")
+    # if provider == "OpenAI" and not os.getenv("OPENAI_API_KEY"):
+    #     st.error("Please set the OPENAI_API_KEY environment variable to continue.")
+    #     st.stop()
+    if provider == "OpenRouter" and not os.getenv("OPENROUTER_API_KEY"):
+        st.error("Please set the OPENROUTER_API_KEY environment variable to continue.")
         st.stop()
 
 
@@ -99,7 +103,12 @@ def get_embeddings(provider: str) -> Embeddings:
 def get_chat_model(provider: str) -> BaseChatModel:
     """Instantiate the chat model used for answering queries."""
     if provider == "Gemini":
+
         return ChatGoogleGenerativeAI(model=GEMINI_CHAT_MODEL)
+    elif provider=="Grok":
+        return ChatOpenAI(model="x-ai/grok-4.1-fast:free",api_key=os.getenv("OPENROUTER_API_KEY"),base_url="https://openrouter.ai/api/v1")
+    elif provider=="OpenAI":
+        return ChatOpenAI(model="openai/gpt-oss-20b:free",api_key=os.getenv("OPENROUTER_API_KEY"),base_url="https://openrouter.ai/api/v1")
     return init_chat_model(OPENAI_CHAT_MODEL)
 
 
@@ -325,7 +334,7 @@ def bootstrap_state(
         st.session_state.active_provider = provider
 
     if "embeddings" not in st.session_state:
-        st.session_state.embeddings = get_embeddings(provider)
+        st.session_state.embeddings = get_embeddings("Gemini")
     if "vector_store" not in st.session_state:
         st.session_state.vector_store = load_vector_store(
             st.session_state.embeddings, vector_path
